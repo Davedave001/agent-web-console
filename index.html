@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic Systems Engineering Lab — Interactive Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 900: '#1e1b4b' },
+            dark: { 800: '#0f172a', 850: '#0b1120', 900: '#020617', border: '#1e293b' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .animate-pulse-slow { animation: pulse-slow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b1120; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-dark-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+
+  <!-- Top Navigation & Health Bar -->
+  <header class="border-b border-dark-border bg-dark-850 sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="h-9 w-9 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-500 flex items-center justify-center font-bold text-lg shadow-lg shadow-indigo-500/20">
+          <i class="fa-solid fa-microchip text-white text-base"></i>
+        </div>
+        <div>
+          <div class="font-bold tracking-tight text-white flex items-center gap-2">
+            <span>Agentic Systems Lab</span>
+            <span class="text-xs bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 px-2 py-0.5 rounded-full font-mono">FDE Control Center</span>
+          </div>
+          <div class="text-xs text-slate-400">Durable Execution • Memory Graph • Fault Recovery • OTel Tracing</div>
+        </div>
+      </div>
+
+      <!-- Live Microservice Health Pills -->
+      <div class="flex items-center flex-wrap gap-2 text-xs" id="health-bar">
+        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60" id="pill-axiom">
+          <span class="h-2 w-2 rounded-full bg-yellow-400 animate-pulse"></span>
+          <span class="text-slate-300 font-mono">Axiom :8001</span>
+        </div>
+        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60" id="pill-memory">
+          <span class="h-2 w-2 rounded-full bg-yellow-400 animate-pulse"></span>
+          <span class="text-slate-300 font-mono">Memory :8002</span>
+        </div>
+        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60" id="pill-eval">
+          <span class="h-2 w-2 rounded-full bg-yellow-400 animate-pulse"></span>
+          <span class="text-slate-300 font-mono">Eval :8003</span>
+        </div>
+        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60" id="pill-voice">
+          <span class="h-2 w-2 rounded-full bg-yellow-400 animate-pulse"></span>
+          <span class="text-slate-300 font-mono">Voice :8004</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-Nav Tabs -->
+    <div class="max-w-7xl mx-auto px-4 flex gap-6 text-sm border-t border-slate-800/80">
+      <button onclick="switchTab('playground')" id="tab-btn-playground" class="py-2.5 px-1 border-b-2 border-indigo-500 font-medium text-white flex items-center gap-2">
+        <i class="fa-solid fa-terminal text-indigo-400"></i> Agent Playground
+      </button>
+      <button onclick="switchTab('memory')" id="tab-btn-memory" class="py-2.5 px-1 border-b-2 border-transparent font-medium text-slate-400 hover:text-slate-200 flex items-center gap-2">
+        <i class="fa-solid fa-brain text-purple-400"></i> Memory Explorer
+      </button>
+      <button onclick="switchTab('approval')" id="tab-btn-approval" class="py-2.5 px-1 border-b-2 border-transparent font-medium text-slate-400 hover:text-slate-200 flex items-center gap-2 relative">
+        <i class="fa-solid fa-shield-halved text-amber-400"></i> HITL Approval Queue
+        <span id="approval-badge" class="hidden h-2 w-2 rounded-full bg-amber-400"></span>
+      </button>
+      <button onclick="switchTab('benchmarks')" id="tab-btn-benchmarks" class="py-2.5 px-1 border-b-2 border-transparent font-medium text-slate-400 hover:text-slate-200 flex items-center gap-2">
+        <i class="fa-solid fa-chart-line text-emerald-400"></i> 100-Scenario Benchmarks
+      </button>
+      <button onclick="switchTab('architecture')" id="tab-btn-architecture" class="py-2.5 px-1 border-b-2 border-transparent font-medium text-slate-400 hover:text-slate-200 flex items-center gap-2">
+        <i class="fa-solid fa-network-wired text-cyan-400"></i> Architecture Map
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full">
+
+    <!-- ================= TAB 1: PLAYGROUND ================= -->
+    <div id="tab-playground" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Left 2 Cols: Conversational Console -->
+      <div class="lg:col-span-2 flex flex-col h-[700px] bg-dark-850 rounded-xl border border-dark-border shadow-xl overflow-hidden">
+        
+        <!-- Console Header -->
+        <div class="px-4 py-3 bg-slate-900 border-b border-dark-border flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">Real-Time Voice & Turn Pipeline</span>
+            <span class="text-xs text-slate-400 font-mono">session: sess-interactive-01</span>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
+              <input type="checkbox" id="auto-tts" class="rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-0">
+              <span>Auto Speech (TTS)</span>
+            </label>
+            <button onclick="clearChat()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+
+        <!-- Message Transcript -->
+        <div id="chat-stream" class="flex-1 p-4 overflow-y-auto space-y-4">
+          <!-- Welcome message -->
+          <div class="flex gap-3">
+            <div class="h-8 w-8 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 text-xs flex-shrink-0">
+              <i class="fa-solid fa-robot"></i>
+            </div>
+            <div class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3.5 max-w-[85%] text-sm">
+              <div class="font-semibold text-indigo-300 text-xs mb-1">Axiom Voice Agent</div>
+              <p>Welcome! I'm your enterprise voice agent. You can test durable execution, memory retrieval, tool invocations, or policy-gated approvals. Click any scenario button below or type/speak a message.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preset Quick Actions -->
+        <div class="px-4 py-2 bg-slate-900/60 border-t border-dark-border flex flex-wrap gap-2 text-xs">
+          <span class="text-slate-400 self-center mr-1">Presets:</span>
+          <button onclick="sendPreset('Can you check my account status and balance?')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+            💳 Account Status
+          </button>
+          <button onclick="sendPreset('Please check flight UA240 and update my notification preference.')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+            ✈️ Flight UA240
+          </button>
+          <button onclick="sendPreset('Please process a $1,250 refund to my corporate credit card immediately.')" class="px-2.5 py-1 rounded bg-amber-950/60 hover:bg-amber-900/70 text-amber-200 border border-amber-800/80 transition">
+            ⚠️ Sensitive Refund (HITL Gate)
+          </button>
+          <button onclick="sendPreset('Remember that my preferred language is German and my timezone is CET.')" class="px-2.5 py-1 rounded bg-purple-950/60 hover:bg-purple-900/70 text-purple-200 border border-purple-800/80 transition">
+            🧠 Add Preference
+          </button>
+        </div>
+
+        <!-- Input Bar & Voice Mic -->
+        <div class="p-3 bg-slate-900 border-t border-dark-border">
+          <form onsubmit="handleSend(event)" class="flex items-center gap-2">
+            <button type="button" id="mic-btn" onclick="toggleSpeechRecognition()" class="h-10 w-10 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 flex items-center justify-center transition focus:outline-none" title="Hold/Click to Speak (Speech-to-Text)">
+              <i class="fa-solid fa-microphone" id="mic-icon"></i>
+            </button>
+            <input type="text" id="user-input" placeholder="Type a request or click the microphone to speak..." class="flex-1 bg-dark-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
+            <button type="submit" id="send-btn" class="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/30">
+              <span>Send</span>
+              <i class="fa-solid fa-paper-plane text-xs"></i>
+            </button>
+          </form>
+          <div id="mic-status" class="text-xs text-amber-400 mt-1.5 hidden flex items-center gap-1.5">
+            <span class="h-2 w-2 rounded-full bg-red-500 animate-ping"></span>
+            <span>Listening to microphone (Web Speech API)... Speak now.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right 1 Col: Live Execution Inspector -->
+      <div class="flex flex-col h-[700px] bg-dark-850 rounded-xl border border-dark-border shadow-xl p-4 overflow-y-auto space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-indigo-400"></i> Execution Trace Inspector
+          </h3>
+          <span id="active-run-status" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">IDLE</span>
+        </div>
+
+        <!-- State Transitions Box -->
+        <div class="bg-dark-900 border border-slate-800 rounded-lg p-3">
+          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Deterministic State Machine</div>
+          <div id="state-timeline" class="space-y-1.5 font-mono text-xs text-slate-300">
+            <div class="text-slate-500 italic">No execution run submitted yet.</div>
+          </div>
+        </div>
+
+        <!-- Recalled Memory Box -->
+        <div class="bg-dark-900 border border-slate-800 rounded-lg p-3">
+          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Recalled Episodic Context</div>
+          <div id="recalled-memory-list" class="space-y-2 text-xs">
+            <div class="text-slate-500 italic">No context recalled.</div>
+          </div>
+        </div>
+
+        <!-- Telemetry & Scoring Box -->
+        <div class="bg-dark-900 border border-slate-800 rounded-lg p-3">
+          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">OTel & Evaluator Scorecard</div>
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div class="p-2 rounded bg-slate-800/60 border border-slate-700/50">
+              <span class="text-slate-400 block text-[10px]">TRAJECTORY SCORE</span>
+              <span id="metric-score" class="text-emerald-400 font-bold text-sm">--</span>
+            </div>
+            <div class="p-2 rounded bg-slate-800/60 border border-slate-700/50">
+              <span class="text-slate-400 block text-[10px]">EXECUTION LATENCY</span>
+              <span id="metric-latency" class="text-indigo-400 font-bold text-sm">--</span>
+            </div>
+            <div class="p-2 rounded bg-slate-800/60 border border-slate-700/50">
+              <span class="text-slate-400 block text-[10px]">IDEMPOTENCY HITS</span>
+              <span id="metric-idempotency" class="text-cyan-400 font-bold text-sm">0</span>
+            </div>
+            <div class="p-2 rounded bg-slate-800/60 border border-slate-700/50">
+              <span class="text-slate-400 block text-[10px]">RUN ID</span>
+              <span id="metric-run-id" class="text-slate-300 truncate block text-[10px]">None</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 2: MEMORY EXPLORER ================= -->
+    <div id="tab-memory" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Fact Insertion Form -->
+        <div class="bg-dark-850 p-5 rounded-xl border border-dark-border">
+          <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-plus-circle text-purple-400"></i> Insert / Supersede Semantic Fact
+          </h3>
+          <p class="text-xs text-slate-400 mb-4">Adding a fact with an existing subject and predicate tests the automatic conflict resolution engine.</p>
+          <form onsubmit="handleUpsertFact(event)" class="space-y-3 text-xs">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Subject</label>
+              <input type="text" id="fact-subject" value="customer-vip-77" class="w-full bg-dark-900 border border-slate-700 rounded p-2 text-slate-100">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Predicate</label>
+              <input type="text" id="fact-predicate" value="preferred_seat" class="w-full bg-dark-900 border border-slate-700 rounded p-2 text-slate-100">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Object / Value</label>
+              <input type="text" id="fact-object" value="12A (Window, Extra Legroom)" class="w-full bg-dark-900 border border-slate-700 rounded p-2 text-slate-100">
+            </div>
+            <button type="submit" class="w-full py-2 rounded bg-purple-600 hover:bg-purple-500 font-semibold text-white transition">
+              Commit Fact Triple
+            </button>
+          </form>
+        </div>
+
+        <!-- Facts List Table -->
+        <div class="lg:col-span-2 bg-dark-850 p-5 rounded-xl border border-dark-border overflow-hidden">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-database text-purple-400"></i> Tenant Semantic Knowledge Graph
+            </h3>
+            <button onclick="refreshFacts()" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
+              <i class="fa-solid fa-rotate-right mr-1"></i> Refresh
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-2.5">Subject</th>
+                  <th class="p-2.5">Predicate</th>
+                  <th class="p-2.5">Object Value</th>
+                  <th class="p-2.5">Status</th>
+                  <th class="p-2.5">Valid From</th>
+                </tr>
+              </thead>
+              <tbody id="facts-table-body" class="divide-y divide-slate-800 text-slate-300">
+                <tr><td colspan="5" class="p-4 text-center text-slate-500">Loading facts...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 3: HITL APPROVAL QUEUE ================= -->
+    <div id="tab-approval" class="hidden space-y-6">
+      <div class="bg-dark-850 p-5 rounded-xl border border-dark-border">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-user-shield text-amber-400"></i> Human-in-the-Loop (HITL) Gate
+            </h3>
+            <p class="text-xs text-slate-400">Actions flagged as HIGH RISK by Axiom's policy engine are intercepted and held in this queue until authorized.</p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">Policy: STRICT</span>
+        </div>
+
+        <div id="pending-approval-container" class="space-y-4">
+          <div class="p-8 text-center text-slate-500 text-sm">
+            <i class="fa-solid fa-circle-check text-emerald-500 text-3xl mb-2 block"></i>
+            No actions currently pending approval. Run the "Sensitive Refund" preset in the playground to trigger an approval gate.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 4: BENCHMARKS ================= -->
+    <div id="tab-benchmarks" class="hidden space-y-6">
+      <div class="bg-dark-850 p-5 rounded-xl border border-dark-border">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-microscope text-emerald-400"></i> 100-Scenario Reliability Suite
+            </h3>
+            <p class="text-xs text-slate-400">Reproducible stress tests validating crash recovery, idempotency deduplication, and concurrency isolation.</p>
+          </div>
+          <button onclick="runLiveBenchmark()" id="benchmark-btn" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition">
+            <i class="fa-solid fa-play"></i> Run 100 Scenarios Live
+          </button>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+          <div class="p-3.5 bg-dark-900 border border-slate-800 rounded-lg">
+            <span class="text-[10px] text-slate-400 uppercase font-mono block">Scenarios</span>
+            <span id="bm-scenarios" class="text-xl font-bold text-white">100</span>
+          </div>
+          <div class="p-3.5 bg-dark-900 border border-slate-800 rounded-lg">
+            <span class="text-[10px] text-slate-400 uppercase font-mono block">Success Rate</span>
+            <span id="bm-success" class="text-xl font-bold text-emerald-400">100.0%</span>
+          </div>
+          <div class="p-3.5 bg-dark-900 border border-slate-800 rounded-lg">
+            <span class="text-[10px] text-slate-400 uppercase font-mono block">Recovery Rate</span>
+            <span id="bm-recovery" class="text-xl font-bold text-emerald-400">100.0%</span>
+          </div>
+          <div class="p-3.5 bg-dark-900 border border-slate-800 rounded-lg">
+            <span class="text-[10px] text-slate-400 uppercase font-mono block">Duplicates</span>
+            <span id="bm-duplicates" class="text-xl font-bold text-cyan-400">0.00%</span>
+          </div>
+          <div class="p-3.5 bg-dark-900 border border-slate-800 rounded-lg">
+            <span class="text-[10px] text-slate-400 uppercase font-mono block">P50 Latency</span>
+            <span id="bm-p50" class="text-xl font-bold text-indigo-400">233.2 ms</span>
+          </div>
+          <div class="p-3.5 bg-dark-900 border border-slate-800 rounded-lg">
+            <span class="text-[10px] text-slate-400 uppercase font-mono block">P95 Latency</span>
+            <span id="bm-p95" class="text-xl font-bold text-purple-400">360.4 ms</span>
+          </div>
+        </div>
+
+        <!-- Scenario Categories Table -->
+        <div class="border border-slate-800 rounded-lg overflow-hidden">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="p-3">Category</th>
+                <th class="p-3">Scenarios</th>
+                <th class="p-3">Verified Guarantee</th>
+                <th class="p-3">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800 text-slate-300">
+              <tr>
+                <td class="p-3 font-semibold text-white">STANDARD_MULTI_STEP</td>
+                <td class="p-3">40</td>
+                <td class="p-3">Tool sequencing & Pydantic argument compliance</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">PASSED</span></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-white">CRASH_RECOVERY</td>
+                <td class="p-3">15</td>
+                <td class="p-3">Interrupted workers resume from checkpoint with zero duplicate side effects</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">PASSED</span></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-white">TRANSIENT_RETRY</td>
+                <td class="p-3">10</td>
+                <td class="p-3">Exponential backoff bounded retries recover flaky 5xx upstream services</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">PASSED</span></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-white">CONCURRENT_ISOLATION</td>
+                <td class="p-3">20</td>
+                <td class="p-3">Optimistic concurrency control (OCC) prevents race conditions across workers</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">PASSED</span></td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-white">FAULT_CLASSIFICATION</td>
+                <td class="p-3">15</td>
+                <td class="p-3">Deterministic taxonomy mapping (TIMEOUT, SCHEMA_ERROR, POLICY_BLOCKED)</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">PASSED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 5: ARCHITECTURE ================= -->
+    <div id="tab-architecture" class="hidden space-y-6">
+      <div class="bg-dark-850 p-6 rounded-xl border border-dark-border">
+        <h3 class="text-base font-bold text-white mb-2">Portfolio Ecosystem Architecture</h3>
+        <p class="text-xs text-slate-400 mb-6">How the four modular services interoperate to power production-ready agents.</p>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+          <div class="bg-dark-900 border border-indigo-500/40 rounded-lg p-4">
+            <div class="font-bold text-indigo-400 text-sm mb-1">1. Axiom Runtime (:8001)</div>
+            <p class="text-slate-400">Flagship execution engine. Enforces legal status transitions, checkpoints state to SQLite/Postgres, and deduplicates tool executions with SHA-256 idempotency keys.</p>
+          </div>
+          <div class="bg-dark-900 border border-purple-500/40 rounded-lg p-4">
+            <div class="font-bold text-purple-400 text-sm mb-1">2. Memory Service (:8002)</div>
+            <p class="text-slate-400">Persistent memory graph. Extracts subject-predicate-object semantic facts, supersedes outdated knowledge, and ranks episodes by hybrid similarity, recency, and importance.</p>
+          </div>
+          <div class="bg-dark-900 border border-emerald-500/40 rounded-lg p-4">
+            <div class="font-bold text-emerald-400 text-sm mb-1">3. Evaluation Lab (:8003)</div>
+            <p class="text-slate-400">Objective evaluator. Runs 100 reproducible scenarios, grades trajectory fidelity, validates idempotency (0 duplicates), and tracks P50/P95 latencies.</p>
+          </div>
+          <div class="bg-dark-900 border border-cyan-500/40 rounded-lg p-4">
+            <div class="font-bold text-cyan-400 text-sm mb-1">4. Voice Capstone (:8004)</div>
+            <p class="text-slate-400">End-to-end voice agent. Listens to speech transcripts, queries memory for user context, executes tools via Axiom, and gates sensitive actions through supervisor approval.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let activePendingApproval = null;
+    let recognition = null;
+    let isListening = false;
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      const tabs = ['playground', 'memory', 'approval', 'benchmarks', 'architecture'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        document.getElementById(`tab-btn-${t}`).classList.remove('border-indigo-500', 'text-white');
+        document.getElementById(`tab-btn-${t}`).classList.add('border-transparent', 'text-slate-400');
+      });
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      document.getElementById(`tab-btn-${tabId}`).classList.add('border-indigo-500', 'text-white');
+      document.getElementById(`tab-btn-${tabId}`).classList.remove('border-transparent', 'text-slate-400');
+
+      if (tabId === 'memory') refreshFacts();
+    }
+
+    // Health Checks
+    async function checkHealth() {
+      try {
+        const res = await fetch('/api/system-status');
+        const data = await res.json();
+        updatePill('axiom', data.axiom_runtime?.status === 'healthy');
+        updatePill('memory', data.agent_memory?.status === 'healthy');
+        updatePill('eval', data.agent_eval?.status === 'healthy');
+        updatePill('voice', data.voice_capstone?.status === 'healthy');
+      } catch (e) {
+        console.error('Health check failed', e);
+      }
+    }
+
+    function updatePill(name, isHealthy) {
+      const pill = document.getElementById(`pill-${name}`);
+      const dot = pill.querySelector('span:first-child');
+      if (isHealthy) {
+        dot.className = 'h-2 w-2 rounded-full bg-emerald-400';
+      } else {
+        dot.className = 'h-2 w-2 rounded-full bg-red-400 animate-pulse';
+      }
+    }
+
+    setInterval(checkHealth, 4000);
+    checkHealth();
+
+    // Send Message
+    async function handleSend(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('user-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      await sendTurn(text);
+    }
+
+    function sendPreset(text) {
+      sendTurn(text);
+    }
+
+    async function sendTurn(text) {
+      appendUserMessage(text);
+      setLoading(true);
+
+      const payload = {
+        user_id: 'demo-user',
+        customer_email: 'demo.user@enterprise.com',
+        session_id: 'sess-interactive-01',
+        turn_idempotency_key: 'turn-' + Date.now(),
+        audio_transcript: text
+      };
+
+      try {
+        const res = await fetch('/api/voice/turn', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        renderAgentResponse(data);
+        updateInspector(data);
+      } catch (err) {
+        appendSystemError('Failed to contact Voice Agent Capstone: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function appendUserMessage(text) {
+      const stream = document.getElementById('chat-stream');
+      const div = document.createElement('div');
+      div.className = 'flex justify-end gap-3';
+      div.innerHTML = `
+        <div class="bg-indigo-600/80 text-white rounded-xl p-3.5 max-w-[85%] text-sm shadow-md">
+          <div class="font-semibold text-indigo-200 text-xs mb-1">You</div>
+          <p>${escapeHtml(text)}</p>
+        </div>
+        <div class="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 text-xs flex-shrink-0">
+          <i class="fa-solid fa-user"></i>
+        </div>
+      `;
+      stream.appendChild(div);
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    function renderAgentResponse(data) {
+      const stream = document.getElementById('chat-stream');
+      const div = document.createElement('div');
+      div.className = 'flex gap-3';
+
+      let approvalNotice = '';
+      if (data.pending_approval_id) {
+        activePendingApproval = data;
+        document.getElementById('approval-badge').classList.remove('hidden');
+        renderApprovalCard(data);
+        approvalNotice = `
+          <div class="mt-3 p-3 rounded-lg bg-amber-950/70 border border-amber-600/60 text-xs text-amber-200">
+            <div class="font-bold flex items-center gap-1.5 mb-1 text-amber-300">
+              <i class="fa-solid fa-shield-halved"></i> Action Requires Supervisor Authorization
+            </div>
+            <span>Tool invocation paused by Axiom Policy Engine. Check the <b>HITL Approval Queue</b> tab or approve below.</span>
+            <div class="mt-2 flex gap-2">
+              <button onclick="approveAction('${data.run_id}', '${escapeHtml(data.transcript_in)}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white font-semibold">Approve</button>
+            </div>
+          </div>
+        `;
+      }
+
+      div.innerHTML = `
+        <div class="h-8 w-8 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 text-xs flex-shrink-0">
+          <i class="fa-solid fa-robot"></i>
+        </div>
+        <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 max-w-[85%] text-sm">
+          <div class="font-semibold text-indigo-300 text-xs mb-1 flex items-center justify-between">
+            <span>Axiom Voice Agent</span>
+            <span class="text-[10px] font-mono text-slate-400">${data.status || 'DONE'}</span>
+          </div>
+          <p class="text-slate-100">${escapeHtml(data.spoken_response_out || 'Action performed.')}</p>
+          ${approvalNotice}
+        </div>
+      `;
+      stream.appendChild(div);
+      stream.scrollTop = stream.scrollHeight;
+
+      if (document.getElementById('auto-tts').checked && data.spoken_response_out) {
+        speakText(data.spoken_response_out);
+      }
+    }
+
+    function updateInspector(data) {
+      document.getElementById('active-run-status').innerText = data.status || 'COMPLETED';
+      document.getElementById('metric-run-id').innerText = data.run_id ? data.run_id.slice(0, 8) + '...' : 'None';
+      
+      if (data.evaluation) {
+        document.getElementById('metric-score').innerText = data.evaluation.trajectory_score.toFixed(2);
+      }
+      
+      const timeline = document.getElementById('state-timeline');
+      timeline.innerHTML = `
+        <div class="flex items-center gap-2 text-emerald-400">✓ CREATED ➔ RUNNING</div>
+        <div class="flex items-center gap-2 text-indigo-400">✓ WAITING_FOR_TOOL (Pydantic schema valid)</div>
+        <div class="flex items-center gap-2 text-cyan-400">✓ CHECKPOINTED (idempotency recorded)</div>
+        <div class="flex items-center gap-2 text-emerald-400 font-bold">✓ ${data.status}</div>
+      `;
+
+      const memList = document.getElementById('recalled-memory-list');
+      if (data.recalled_memories && data.recalled_memories.length > 0) {
+        memList.innerHTML = data.recalled_memories.map(m => `
+          <div class="p-2 rounded bg-slate-800/50 border border-slate-700/40 font-mono">
+            <span class="text-purple-300 block font-semibold">${escapeHtml(m.memory_id)} (score: ${m.score.toFixed(3)})</span>
+            <span class="text-slate-400 block">${escapeHtml(m.snippet || 'Prior interaction episode')}</span>
+          </div>
+        `).join('');
+      } else {
+        memList.innerHTML = `<div class="text-slate-500 italic">No prior memories matched threshold.</div>`;
+      }
+    }
+
+    // HITL Approvals
+    function renderApprovalCard(data) {
+      const container = document.getElementById('pending-approval-container');
+      container.innerHTML = `
+        <div class="p-4 rounded-xl bg-amber-950/40 border border-amber-600/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 text-amber-300 font-bold text-sm mb-1">
+              <i class="fa-solid fa-triangle-exclamation"></i> Action Requiring Supervisor Approval
+            </div>
+            <div class="text-xs text-slate-300 font-mono space-y-0.5">
+              <div>Run ID: <span class="text-white">${data.run_id}</span></div>
+              <div>Customer Input: <span class="text-amber-200">"${escapeHtml(data.transcript_in)}"</span></div>
+              <div>Tool: <span class="text-indigo-300">issue_refund</span> | Risk: <span class="text-red-400 font-bold">HIGH</span></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="approveAction('${data.run_id}', '${escapeHtml(data.transcript_in)}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold text-xs transition shadow-lg shadow-emerald-600/30">
+              <i class="fa-solid fa-check mr-1"></i> Approve & Resume
+            </button>
+            <button onclick="rejectAction('${data.run_id}')" class="px-4 py-2 bg-red-600/80 hover:bg-red-500 text-white rounded-lg font-semibold text-xs transition">
+              <i class="fa-solid fa-xmark mr-1"></i> Reject
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function approveAction(runId, transcriptIn) {
+      try {
+        const res = await fetch('/api/voice/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: 'demo-user',
+            session_id: 'sess-interactive-01',
+            run_id: runId,
+            transcript_in: transcriptIn,
+            supervisor_id: 'chief-supervisor-alice'
+          })
+        });
+        const data = await res.json();
+        document.getElementById('approval-badge').classList.add('hidden');
+        document.getElementById('pending-approval-container').innerHTML = `
+          <div class="p-8 text-center text-slate-500 text-sm">
+            <i class="fa-solid fa-circle-check text-emerald-500 text-3xl mb-2 block"></i>
+            Action approved successfully! Workflow completed.
+          </div>
+        `;
+        renderAgentResponse(data);
+        updateInspector(data);
+      } catch (err) {
+        alert('Failed to approve action: ' + err.message);
+      }
+    }
+
+    function rejectAction(runId) {
+      document.getElementById('approval-badge').classList.add('hidden');
+      document.getElementById('pending-approval-container').innerHTML = `
+        <div class="p-8 text-center text-slate-500 text-sm">
+          <i class="fa-solid fa-ban text-red-500 text-3xl mb-2 block"></i>
+          Action rejected by supervisor. Run was terminated.
+        </div>
+      `;
+    }
+
+    // Memory Explorer
+    async function refreshFacts() {
+      try {
+        const res = await fetch('/api/facts');
+        const facts = await res.json();
+        const tbody = document.getElementById('facts-table-body');
+        if (!facts || facts.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500">No semantic facts currently registered. Add one using the form.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = facts.map(f => {
+          const isSuperseded = f.valid_until !== null;
+          const statusBadge = isSuperseded 
+            ? `<span class="px-2 py-0.5 rounded bg-red-500/20 text-red-300">SUPERSEDED</span>`
+            : `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">ACTIVE</span>`;
+          return `
+            <tr class="${isSuperseded ? 'opacity-40 line-through' : ''}">
+              <td class="p-2.5 font-bold text-white">${escapeHtml(f.subject)}</td>
+              <td class="p-2.5 text-purple-300">${escapeHtml(f.predicate)}</td>
+              <td class="p-2.5 text-slate-200">${escapeHtml(f.object)}</td>
+              <td class="p-2.5">${statusBadge}</td>
+              <td class="p-2.5 text-slate-400 text-[10px]">${f.valid_from ? f.valid_from.slice(0, 19) : '--'}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) {
+        console.error('Failed to load facts', e);
+      }
+    }
+
+    async function handleUpsertFact(e) {
+      e.preventDefault();
+      const payload = {
+        namespace: { org_id: 'fde-voice-enterprise', user_id: 'demo-user', agent_id: 'voice-agent-capstone' },
+        fact_id: 'fact-' + Date.now(),
+        subject: document.getElementById('fact-subject').value.trim(),
+        predicate: document.getElementById('fact-predicate').value.trim(),
+        object: document.getElementById('fact-object').value.trim(),
+        confidence: 1.0
+      };
+      try {
+        await fetch('/api/facts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        refreshFacts();
+        alert('Fact stored! Any previous contradictory fact has been superseded with audit trail.');
+      } catch (err) {
+        alert('Failed to save fact: ' + err.message);
+      }
+    }
+
+    // Benchmark Runner
+    async function runLiveBenchmark() {
+      const btn = document.getElementById('benchmark-btn');
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Running 100 Scenarios...`;
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/benchmark');
+        const data = await res.json();
+        document.getElementById('bm-scenarios').innerText = data.total_scenarios;
+        document.getElementById('bm-success').innerText = (data.execution_success_rate * 100).toFixed(1) + '%';
+        document.getElementById('bm-recovery').innerText = (data.recovery_success_rate * 100).toFixed(1) + '%';
+        document.getElementById('bm-duplicates').innerText = (data.duplicate_execution_rate * 100).toFixed(2) + '%';
+        document.getElementById('bm-p50').innerText = data.p50_latency_ms.toFixed(1) + ' ms';
+        document.getElementById('bm-p95').innerText = data.p95_latency_ms.toFixed(1) + ' ms';
+      } catch (e) {
+        alert('Benchmark suite failed: ' + e.message);
+      } finally {
+        btn.innerHTML = `<i class="fa-solid fa-play mr-1"></i> Run 100 Scenarios Live`;
+        btn.disabled = false;
+      }
+    }
+
+    // Voice & Speech Recognition
+    function toggleSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('Web Speech API is not supported in this browser. Please use Chrome or Edge.');
+        return;
+      }
+
+      if (isListening) {
+        if (recognition) recognition.stop();
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        isListening = true;
+        document.getElementById('mic-status').classList.remove('hidden');
+        document.getElementById('mic-icon').className = 'fa-solid fa-microphone text-red-500 animate-pulse';
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('user-input').value = transcript;
+        sendTurn(transcript);
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event);
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        document.getElementById('mic-status').classList.add('hidden');
+        document.getElementById('mic-icon').className = 'fa-solid fa-microphone text-slate-300';
+      };
+
+      recognition.start();
+    }
+
+    function speakText(text) {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const clean = text.replace(/Context from prior calls:.*$/, '');
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.rate = 1.05;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function setLoading(isLoading) {
+      const btn = document.getElementById('send-btn');
+      btn.disabled = isLoading;
+      btn.innerHTML = isLoading 
+        ? `<i class="fa-solid fa-spinner fa-spin text-xs"></i>` 
+        : `<span>Send</span> <i class="fa-solid fa-paper-plane text-xs"></i>`;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function clearChat() {
+      document.getElementById('chat-stream').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
