@@ -7,7 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN pip install --no-cache-dir fastapi uvicorn pydantic
 
-COPY server.py index.html /app/
+COPY web-console/server.py /app/server.py
+COPY web-console/index.html /app/index.html
 
 EXPOSE 8500
 
